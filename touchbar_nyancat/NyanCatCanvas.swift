@@ -8,89 +8,86 @@
 
 import Cocoa
 
-class NyanCatCanvas: NSImageView {
-    @objc var timer:Timer? = nil
-
-    @objc var imageLoaded:Bool = false;
-
-    @objc var xPosition: CGFloat = -680 {
+class NyanCatCanvas: NSView {
+    var timer: Timer?
+    var imageLoaded: Bool = false
+    var xPosition: CGFloat = -680 {
         didSet {
-            self.frame = CGRect(x: xPosition, y: 0, width: 680, height: 30)
+            setFrame()
         }
     }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-
-        // Drawing code here.
-        
-        self.animates = true
-        
-        if(self.timer == nil) {
-            timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(self.moveNyancat), userInfo: nil, repeats: true)
-        }
-
-        if(!self.imageLoaded){
-            self.downloadImage()
-        }
-        
-        self.canDrawSubviewsIntoLayer = true
-//        self.frame = CGRect(x: xPosition, y: 0, width: 680, height: 30)
-    }
-    
-    override func touchesBegan(with event: NSEvent) {
-        // Calling super causes the cat to jump back to its original position 🤔
-        //super.touchesBegan(with: event)
-    }
-    
-    override func didAddSubview(_ subview: NSView) {
-        
-    }
-    
     var direction: CGFloat = 1
-    @objc public func moveNyancat() {
-        xPosition += direction
-        if xPosition > 0 {
-            direction = -1
-        } else if xPosition < -680 {
-            direction = 1
+    let imageUrl = "https://i.imgur.com/7pgdK28.gif"
+
+    var backgroundImageView: NSImageView = {
+        let imageView = NSImageView(frame: .zero)
+        imageView.animates = true
+        imageView.canDrawSubviewsIntoLayer = true
+        return imageView
+    }()
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupView()
+    }
+    
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setupSize()
+    }
+
+    func setupView() {
+        self.wantsLayer = true // Enable layer-backing
+        self.addSubview(backgroundImageView)
+        self.downloadImage()
+        timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(moveNyancat), userInfo: nil, repeats: true)
+    }
+
+    func setupSize() {
+        xPosition = -680
+        setFrame()
+    }
+
+    func setFrame() {
+        DispatchQueue.main.async {
+            self.backgroundImageView.frame = CGRect(x: self.xPosition, y: 0, width: 680, height: 30)
         }
     }
 
-    @objc func downloadImage() {
-        
-        let url = URL(string: "https://i.imgur.com/7pgdK28.gif")
-
-        getDataFromUrl(url: url!) { (data, response, error)  in
-            guard let data = data, error == nil else { return }
-
-            DispatchQueue.main.async() { () -> Void in
-                self.image = NSImage(data: data)
-                self.imageLoaded = true;
+    override func touchesBegan(with event: NSEvent) {
+        timer?.invalidate()
+    }
+    
+    override func touchesMoved(with event: NSEvent) {
+        if #available(macOS 10.12.2, *) {
+            if let touch = event.allTouches().first {
+                let current = touch.location(in: self).x
+                let previous = touch.previousLocation(in: self).x
+                let dX = current - previous
+                xPosition += dX
             }
         }
     }
     
-    @objc func getDataFromUrl(url: URL, completion: @escaping (_ data: Data?, _  response: URLResponse?, _ error: Error?) -> Void) {
-        URLSession.shared.dataTask(with: url) {
-            (data, response, error) in
-            completion(data, response, error)
-            }.resume()
+    override func touchesEnded(with event: NSEvent) {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(moveNyancat), userInfo: nil, repeats: true)
     }
     
+    @objc func moveNyancat() {
+        xPosition += direction
+        if xPosition > 0 { direction = -1 }
+        else if xPosition < -680 { direction = 1 }
+    }
 
-    
-    override func touchesMoved(with event: NSEvent) {
-        if #available(OSX 10.12.2, *) {
-            let current = event.allTouches().first?.location(in: self).x ?? 0
-            let previous = event.allTouches().first?.previousLocation(in: self).x ?? 0
-        
-            let dX = (current - previous)
-            
-            xPosition += dX
-        } else {
-            // Fallback on earlier versions
-        }
+    func downloadImage() {
+        guard let url = URL(string: imageUrl) else { return }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil else { return }
+            DispatchQueue.main.async {
+                self.backgroundImageView.image = NSImage(data: data)
+                self.imageLoaded = true
+            }
+        }.resume()
     }
-    
 }
