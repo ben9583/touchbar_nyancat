@@ -12,8 +12,9 @@ class NyanCatCanvas: NSView {
     var timer: Timer?
     var imageLoaded: Bool = false
     
+    static let SPRITE_SIZE: CGFloat = 34
     static let MAX_POSITION: CGFloat = 0
-    static let MIN_POSITION: CGFloat = -646
+    static let MIN_POSITION: CGFloat = -680 + SPRITE_SIZE
     
     var xPosition: CGFloat = MIN_POSITION {
         didSet {
@@ -21,6 +22,7 @@ class NyanCatCanvas: NSView {
         }
     }
     var direction: CGFloat = 1
+    var touching: Bool = false
     let imageUrl = "https://i.imgur.com/7pgdK28.gif"
 
     var backgroundImageView: NSImageView = {
@@ -59,10 +61,22 @@ class NyanCatCanvas: NSView {
     }
 
     override func touchesBegan(with event: NSEvent) {
-        timer?.invalidate()
+        if #available(macOS 10.12.2, *) {
+            if let touch = event.allTouches().first {
+                let current = touch.location(in: self).x
+                if xPosition - current < NyanCatCanvas.MIN_POSITION && xPosition - current > NyanCatCanvas.MIN_POSITION - NyanCatCanvas.SPRITE_SIZE - 8 { // Accounts for whitespace
+                    touching = true
+                    timer?.invalidate()
+                }
+            }
+        }
     }
     
     override func touchesMoved(with event: NSEvent) {
+        if !touching {
+            return
+        }
+        
         if #available(macOS 10.12.2, *) {
             if let touch = event.allTouches().first {
                 let current = touch.location(in: self).x
@@ -75,6 +89,11 @@ class NyanCatCanvas: NSView {
     }
     
     override func touchesEnded(with event: NSEvent) {
+        if !touching {
+            return
+        }
+        
+        touching = false
         timer?.invalidate()
         timer = Timer.scheduledTimer(timeInterval: 0.01, target: self, selector: #selector(moveNyancat), userInfo: nil, repeats: true)
     }
