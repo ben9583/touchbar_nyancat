@@ -11,7 +11,11 @@ import Cocoa
 class NyanCatCanvas: NSView {
     var timer: Timer?
     var imageLoaded: Bool = false
-    var xPosition: CGFloat = -680 {
+    
+    static let MAX_POSITION: CGFloat = 0
+    static let MIN_POSITION: CGFloat = -680
+    
+    var xPosition: CGFloat = MIN_POSITION {
         didSet {
             setFrame()
         }
@@ -44,7 +48,7 @@ class NyanCatCanvas: NSView {
     }
 
     func setupSize() {
-        xPosition = -680
+        xPosition = NyanCatCanvas.MIN_POSITION
         setFrame()
     }
 
@@ -64,7 +68,8 @@ class NyanCatCanvas: NSView {
                 let current = touch.location(in: self).x
                 let previous = touch.previousLocation(in: self).x
                 let dX = current - previous
-                xPosition += dX
+                
+                xPosition = max(min(xPosition + dX, NyanCatCanvas.MAX_POSITION), NyanCatCanvas.MIN_POSITION)
             }
         }
     }
@@ -76,8 +81,8 @@ class NyanCatCanvas: NSView {
     
     @objc func moveNyancat() {
         xPosition += direction
-        if xPosition > 0 { direction = -1 }
-        else if xPosition < -680 { direction = 1 }
+        if xPosition > NyanCatCanvas.MAX_POSITION { direction = -1 }
+        else if xPosition < NyanCatCanvas.MIN_POSITION { direction = 1 }
     }
 
     func downloadImage() {
