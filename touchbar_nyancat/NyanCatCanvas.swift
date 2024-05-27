@@ -13,7 +13,7 @@ class NyanCatCanvas: NSView {
     var imageLoaded: Bool = false
     
     static let MAX_POSITION: CGFloat = 0
-    static let MIN_POSITION: CGFloat = -680
+    static let MIN_POSITION: CGFloat = -646
     
     var xPosition: CGFloat = MIN_POSITION {
         didSet {
